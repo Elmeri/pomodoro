@@ -1,0 +1,35 @@
+[package]
+name = "pomo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+rusqlite = { version = "0.43.0", features = ["bundled"] }
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+dirs = "7.0.0"
+ctrlc = "3.4"
+notify-rust = "4.11"
+tray-icon = "0.27.0"
+winit = "0.30"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-app-kit = { version = "0.3.2", features = ["NSApplication", "NSRunningApplication"] }
+objc2-foundation = "0.3.2"
+
+# Stage 2: Floating egui popup dependencies
+egui = {version = "0.37.0", features = ["default_fonts"]}
+egui-winit = "0.37.0"
+egui_glow = {version = "0.37.0", features = ["winit"] }
+glutin = "0.32"
+glutin-winit = "0.5"
+raw-window-handle = "0.6"
+
+[package.metadata.bundle]
+name = "Pomo"
+icon = ["assets/icon.icns"]
+identifier = "com.yourname.pomo"
+
+[package.metadata.bundle.osx]
+info_plist_exts = ["Info.plist"]

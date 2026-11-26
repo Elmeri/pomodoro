@@ -74,7 +74,6 @@ fn build_template_tomato_icon() -> Icon {
     let rx = 13.5_f32;
     let ry = 11.4_f32;
 
-    // Helper for anti-aliased distance from a line segment
     let dist_to_segment = |px: f32, py: f32, x1: f32, y1: f32, x2: f32, y2: f32| -> f32 {
         let vx = x2 - x1;
         let vy = y2 - y1;
@@ -97,18 +96,16 @@ fn build_template_tomato_icon() -> Icon {
             let fx = x as f32 + 0.5;
             let fy = y as f32 + 0.5;
 
-            // 1. Solid filled tomato body (matching SVG rx=295, ry=265 proportions)
+            // 1. Solid filled tomato body
             let dx = (fx - cx) / rx;
             let dy = (fy - cy) / ry;
             let body_dist = (dx * dx + dy * dy).sqrt();
             let mut alpha = ((1.03 - body_dist) * 14.0).clamp(0.0, 1.0);
 
-            // 2. Calyx leaves + stem (matching SVG paths around y=325)
-            // Upright stem
+            // 2. Calyx leaves + stem
             let stem_d = dist_to_segment(fx, fy, cx, 4.2, cx, 10.5);
             let stem_alpha = ((1.55 - stem_d) * 2.2).clamp(0.0, 1.0);
 
-            // Left & right sweeping calyx leaves
             let left_leaf_d = dist_to_segment(fx, fy, cx, 10.2, 9.8, 12.2);
             let right_leaf_d = dist_to_segment(fx, fy, cx, 10.2, 26.2, 12.2);
             let center_leaf_d = dist_to_segment(fx, fy, cx, 10.2, cx, 14.2);
@@ -270,6 +267,10 @@ impl ApplicationHandler<UserEvent> for PomoTrayApp {
             }
             UserEvent::MenuClicked(id) => {
                 if id == self.show_timer_in_bar_item.id() {
+                    let show_in_bar = self.show_timer_in_bar_item.is_checked();
+                    let _ = self
+                        .db
+                        .set_bool_setting("show_countdown_in_bar", show_in_bar);
                     self.update_tray_display();
                 } else if id == self.custom_window_item.id() {
                     let recent = self.db.get_recent_projects(4).unwrap_or_default();
@@ -312,12 +313,9 @@ impl ApplicationHandler<UserEvent> for PomoTrayApp {
 }
 
 impl PomoTrayApp {
-    /// Updates both the top menu bar label (respecting the stealth toggle)
-    /// and the live status row inside the dropdown menu.
     fn update_tray_display(&self) {
         let is_idle = self.current_status == "Idle";
 
-        // Always show the full status inside the dropdown menu when clicked
         let dropdown_label = if is_idle {
             "Status: Idle".to_string()
         } else if self.is_paused {
@@ -327,7 +325,6 @@ impl PomoTrayApp {
         };
         self.status_menu_item.set_text(&dropdown_label);
 
-        // Decide what text appears next to the monochrome icon in the top bar
         if let Some(tray) = &self.tray_icon {
             if is_idle {
                 tray.set_title(Some(""));
@@ -335,7 +332,6 @@ impl PomoTrayApp {
                 let prefix = if self.is_paused { "⏸ " } else { "" };
                 tray.set_title(Some(&format!("{}{}", prefix, self.current_status)));
             } else {
-                // Stealth mode: subtle indicator dot while active; click icon to see time
                 let indicator = if self.is_paused { " ⏸" } else { " •" };
                 tray.set_title(Some(indicator));
             }
@@ -346,7 +342,6 @@ impl PomoTrayApp {
         let menu = Menu::new();
         self.quick_project_items.clear();
 
-        // Live status readout visible whenever the user opens the menu
         menu.append(&self.status_menu_item).unwrap();
         menu.append(&PredefinedMenuItem::separator()).unwrap();
 
@@ -355,7 +350,6 @@ impl PomoTrayApp {
 
         let mut projects = self.db.get_recent_projects(3).unwrap_or_default();
         if projects.is_empty() {
-            projects.push("rust".to_string());
             projects.push("general".to_string());
         }
 
@@ -370,7 +364,6 @@ impl PomoTrayApp {
         menu.append(&self.stop_item).unwrap();
         menu.append(&PredefinedMenuItem::separator()).unwrap();
 
-        // Settings toggle for menu bar countdown visibility
         menu.append(&self.show_timer_in_bar_item).unwrap();
         menu.append(&PredefinedMenuItem::separator()).unwrap();
         menu.append(&self.quit_item).unwrap();
@@ -510,11 +503,18 @@ pub fn run_tray(db: Database) -> Result<()> {
         }
     });
 
+    let show_countdown_in_bar = db.get_bool_setting("show_countdown_in_bar", true);
+
     let mut app = PomoTrayApp {
         tray_icon: None,
         popup: None,
         status_menu_item: MenuItem::new("Status: Idle", false, None),
-        show_timer_in_bar_item: CheckMenuItem::new("Show Countdown in Bar", true, true, None),
+        show_timer_in_bar_item: CheckMenuItem::new(
+            "Show Countdown in Bar",
+            true,
+            show_countdown_in_bar,
+            None,
+        ),
         custom_window_item: MenuItem::new("New Custom Session...", true, None),
         pause_resume_item: MenuItem::new("Pause / Resume", true, None),
         stop_item: MenuItem::new("Stop Session", true, None),

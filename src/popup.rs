@@ -125,7 +125,7 @@ impl PopupWindow {
             gl_surface,
             gl,
             egui_glow,
-            project_input: "rust".to_string(),
+            project_input: "general".to_string(),
             duration_mins: 25,
             recent_projects: Vec::new(),
             today_stats: Vec::new(),
@@ -135,7 +135,7 @@ impl PopupWindow {
 
     pub fn update_data(&mut self, recent_projects: Vec<String>, today_stats: Vec<ProjectStat>) {
         if let Some(first) = recent_projects.first() {
-            if self.project_input == "rust" || self.project_input.is_empty() {
+            if self.project_input == "general" || self.project_input.is_empty() {
                 self.project_input = first.clone();
             }
         }

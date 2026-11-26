@@ -30,6 +30,14 @@ impl Database {
             [],
         )?;
 
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )",
+            [],
+        )?;
+
         Ok(Self { conn })
     }
 
@@ -122,5 +130,26 @@ impl Database {
             projects.push(proj?);
         }
         Ok(projects)
+    }
+    pub fn get_bool_setting(&self, key: &str, default: bool) -> bool {
+        let result: rusqlite::Result<String> = self.conn.query_row(
+            "SELECT value FROM settings WHERE key = ?1",
+            [key],
+            |row| row.get(0),
+        );
+        match result {
+            Ok(val) => val == "1" || val.eq_ignore_ascii_case("true"),
+            Err(_) => default,
+        }
+    }
+
+    pub fn set_bool_setting(&self, key: &str, value: bool) -> anyhow::Result<()> {
+        let stored = if value { "1" } else { "0" };
+        self.conn.execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            [key, stored],
+        )?;
+        Ok(())
     }
 }
